@@ -1,0 +1,62 @@
+import  cv2 as cv
+import  numpy as np
+import  time
+img1=cv.imread('jiance2.bmp',0)
+img1_mb=cv.imread('Image_mb1.bmp',0)
+roi=cv.selectROI(img1_mb,showCrosshair=False)
+menban=np.zeros(img1_mb.shape[:2],np.uint8)
+menban[int(roi[1]):int(roi[1]+roi[3]),int(roi[0]):int(roi[0]+roi[2])]=255
+mask_img=cv.bitwise_or(img1_mb,img1_mb,mask=menban)
+cv.imshow('s',mask_img)
+cv.waitKey()
+throshod_mask=cv.threshold(mask_img,150,255,cv.THRESH_BINARY_INV)[1]
+throshod_mask[0:img1_mb.shape[0],0:roi[0]]=0
+throshod_mask[0:roi[1],roi[0]:roi[0]+roi[2]]=0
+throshod_mask[roi[1]+roi[3]:img1_mb.shape[0],roi[0]:roi[0]+roi[2]]=0
+throshod_mask[0:img1_mb.shape[0],roi[0]+roi[2]:img1_mb.shape[1]]=0
+kernel=np.ones([2,2])
+cant=cv.Canny(throshod_mask,200,255)
+cv.imshow('w',cant)
+cv.waitKey()
+stat_time=time.time()
+mask_img2=cv.bitwise_or(img1,img1,mask=menban)
+throshod_mask2=cv.threshold(mask_img2,155,255,cv.THRESH_BINARY_INV)[1]
+throshod_mask2[0:img1_mb.shape[0],0:roi[0]]=0
+throshod_mask2[0:roi[1],roi[0]:roi[0]+roi[2]]=0
+throshod_mask2[roi[1]+roi[3]:img1_mb.shape[0],roi[0]:roi[0]+roi[2]]=0
+throshod_mask2[0:img1_mb.shape[0],roi[0]+roi[2]:img1_mb.shape[1]]=0
+cv.imshow('w',throshod_mask2)
+cv.waitKey()
+res=throshod_mask-throshod_mask2
+cv.imshow('re',res)
+cv.waitKey()
+sum_mb=0
+mb=cv.imread('Image_mb1.bmp')
+contor_mb=cv.findContours(throshod_mask,cv.RETR_EXTERNAL,cv.CHAIN_APPROX_NONE)[1]
+for i in range(len(contor_mb)):
+    print(cv.contourArea(contor_mb[i]))
+    if cv.contourArea(contor_mb[i])>5:
+       sum_mb+=cv.contourArea(contor_mb[i])
+       cv.drawContours(mb,contor_mb,i,(255,0,0),1)
+print(sum_mb)
+cv.imshow('ress',mb)
+cv.waitKey()
+open_img=cv.morphologyEx(res,cv.MORPH_OPEN,kernel)
+contor_test=cv.findContours(open_img,cv.RETR_EXTERNAL,cv.CHAIN_APPROX_NONE)[1]
+sum_test=0
+res_img=cv.cvtColor(img1,cv.COLOR_GRAY2BGR)
+for i in range(len(contor_test)):
+    print(cv.contourArea(contor_test[i]))
+    if cv.contourArea(contor_test[i])>5:
+        sum_test+=cv.contourArea(contor_test[i])
+if sum_test>(sum_mb*0.05):
+    for i in range(len(contor_test)):
+        if cv.contourArea(contor_test[i])>5:
+            cv.drawContours(res_img,contor_test,i,(0,0,255),-1)
+    cv.putText(res_img,"NG",(100,150),cv.FONT_HERSHEY_SIMPLEX,5,(0,0,255),3)
+else:
+    cv.putText(res_img,"OK",(100,150),cv.FONT_HERSHEY_SIMPLEX,5,(0,255,0),3)
+cv.imshow('result',res_img)
+cv.waitKey()
+end_time=time.time()
+print("Time is："+str(end_time-stat_time))
